@@ -1,0 +1,387 @@
+---
+title: "EXPLORING CUSTOMER TRANSACTIONS USING R"
+author: "CHEBET"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,comment = NA,message = FALSE)
+```
+
+
+#Project Overview
+In this project i will use R to perform a basic data science workflow on customer transaction dataset (e-commerce). The project introduces the use of R for data import,data inspection,data cleaning, exploretory data analysis(EDA),visualizationm and interpretation.
+The dataset contains transaction-level information including customer demographics,product characteristics,payment methods,transaction dates,prices,quantities,ratings and membership status.It help us identify simple patterns that can support better business decisions.
+
+
+
+#Project objectives
+The project aims to achieve the following objectives
+  1.Import a dataset in R.
+  2.Inspect the structure and characteristics of data.
+  3.Identify and handle missing or inconsistent values.
+  4.Convert variables to appropriate data types.
+  5.Generate descriptive statistics using R.
+  6.Create basic statistical and graphical summaries.
+  7.Explore relationships between variables.
+  8.Communicate data-driven findings.
+
+
+
+
+
+#Setting a working directory
+```{r}
+ setwd("C:/Users/Administrator/Desktop/PROFFESIONAL TRAINING")
+```
+
+
+#import libraries
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(sjmisc)
+library(rio)
+library(stats)
+library(forecast)
+library(summarytools)
+library(ggthemes)
+library(formatR)
+library(tidyr)
+library(kableExtra)
+library(psych)
+library(plotly)
+        
+
+```
+
+
+#import dataset
+```{r}
+comm_data<-read.csv("comm.csv")
+```
+
+
+#display first observations
+```{r}
+head(comm_data)
+```
+
+
+
+#display last observations
+```{r}
+tail(comm_data)
+```
+
+
+
+#number of observations and variables
+```{r}
+dim(comm_data)
+```
+
+#structure and characteristics of data
+```{r}
+str(comm_data)
+```
+
+
+
+#summary statistics
+```{r}
+summary(comm_data)
+```
+
+
+#identify and handle missing values
+```{r}
+miss_value<-sum(is.na(comm_data))
+head(miss_value)
+```
+
+
+#identify missing colms
+```{r}
+colSums(is.na(comm_data))
+         
+
+```
+
+
+
+#identify duplicate records
+```{r}
+sum(duplicated(comm_data))
+```
+
+
+
+#Replace missing values with mean
+```{r}
+comm_data$Age[is.na(comm_data$Age)]<-mean(comm_data$Age,na.rm=TRUE)
+```
+
+
+
+```{r}
+colSums(is.na(comm_data))
+
+```
+
+
+#Checking for outliers
+```{r}
+boxplot(comm_data$Age,
+        ylab="Age",
+        main="cheking  for outliers",
+        col="red")
+      
+      
+        
+
+```
+
+
+
+
+#descriptive statistics
+```{r}
+describe(comm_data)
+head(describe)
+```
+
+
+
+#Data preparation
+#convert categorical variables to factors
+```{r}
+comm_data$PaymentMethod<-as.factor(comm_data$PaymentMethod)
+comm_data$Gender<-as.factor(comm_data$Gender)
+comm_data$Location<-as.factor(comm_data$Location)
+comm_data$ProductCategory<-as.factor(comm_data$ProductCategory)
+comm_data$MembershipStatus<-as.factor(comm_data$MembershipStatus)
+
+
+
+```
+
+
+#convert transaction date to proper date format
+```{r}
+comm_data$TransactionDate<-as.Date(comm_data$TransactionDate,
+                                   format = "%m%d%y")
+```
+
+
+
+#create the cleaned analytical dataset
+```{r}
+clean_data<-na.omit(comm_data)
+```
+
+
+```{r}
+dim(clean_data)
+```
+
+
+#exploratory data analysis
+#distribution of total amount
+```{r}
+summary(comm_data$TotalAmount)
+```
+
+
+```{r}
+ggplot(comm_data,aes(x=TotalAmount))+
+  geom_histogram(bins=30)+
+  labs(title="Distribution of Total Transaction Amount",
+       x="Total Amount",
+       y="Frequency")
+```
+
+
+
+#product category that generates the highest sales
+```{r}
+aggregate(TotalAmount~ProductCategory,
+          data=comm_data,sum)
+```
+
+
+#Home appliances therefore generate the highest total sales of 110897.21
+
+
+
+```{r}
+ggplot(comm_data,aes(x=ProductCategory,y=TotalAmount))+
+  geom_boxplot()+
+  labs(title=" Transaction Amount by ProductCategory",
+       x="ProductCategory",
+       y="Total Amount")
+
+```
+
+
+
+#payment method that is frequently used
+```{r}
+table(comm_data$PaymentMethod)
+```
+
+
+#UPI is therefore the most frequently used payment method with 90 transactions
+
+
+
+```{r}
+ggplot(comm_data,aes(x=PaymentMethod))+
+  geom_bar()+
+  labs(title="Frequency of payment methods",
+       x="Payment method",
+       y="Number of transactions")
+
+```
+
+
+
+#average transaction value
+```{r}
+mean(comm_data$TotalAmount)
+```
+
+
+
+#transaction spending between membershipstatus
+```{r}
+aggregate(TotalAmount~MembershipStatus,
+          data=comm_data,mean)
+```
+
+
+
+#The average transaction amount differs between membershipstatus, basic members have the highest transaction followed by premium then gold being the lowest
+
+
+
+```{r}
+ggplot(comm_data,aes(x=MembershipStatus,y=TotalAmount))+
+  geom_boxplot()+
+  labs(title="Transaction Spending by MembershipStatus",
+       x="MembershipStatus",
+       y="TotalAmount")
+
+```
+
+
+
+#is there any association between gender and product category
+```{r}
+table(comm_data$Gender,comm_data$ProductCategory)
+```
+
+
+
+#there is no association between gender and product category
+
+
+
+```{r}
+ggplot(comm_data,aes(x=ProductCategory,fill=Gender))+
+  geom_bar(position = "dodge")+
+  labs(title="ProductCategory by Gender",
+       x="ProductCategory",
+       y="Number of Transactions")
+
+```
+
+
+
+
+#what is the relationship between age,rating and total amount 
+```{r}
+cor(comm_data[c("Age","Rating","TotalAmount")],
+    use = "complete.obs")
+```
+
+
+#the relationship between age and rating  is positively weak ,between age and total amount is negatively weak,between rating and age positively weak,between rating and total amount is negatively weak,between total amount and age is negatively weak and between total aamount and rating is also negatively weak.
+
+
+
+```{r}
+ggplot(comm_data,aes(x=Age,y=TotalAmount,size=Rating))+
+  geom_point(alpha = 0.6)+
+  labs(title="Relationship Between Age,Rating and TotalAmount",
+       x="Age",
+       y="TotalAmount",
+       size="Rating")
+
+```
+
+
+
+#creat a 3D scatter plot
+```{r}
+plot_ly(
+  data=comm_data,
+  x=~Age,
+  y=~Rating,
+  z=~TotalAmount,
+  type="scatter3d",
+  mode="markers",
+  marker=list(size=5)
+)%>%
+  layout(
+    title="Relationship Between Age,Rating and TotalAmount",
+    scene=list(
+      xaxis=list(title="Age"),
+      yaxis=list(title="Rating"),
+      zaxis=list(title="TotalAmount")
+    )
+  )
+```
+
+
+
+
+
+#Scatter plot of price vercus total amount
+```{r}
+library(ggplot2)
+ggplot(comm_data,aes(x=Price,y=TotalAmount))+
+  geom_point()+
+  labs(title="Price versus TotalAmount",
+       x="Price",
+       y="TotalAmount")
+```
+
+
+#Key findings
+The analysis found that the dataset contained 300 transactions and 14 variables.Home appliances had the highest total sales,while UPI was the most preferred payment method.The average transaction amount about 803.12,and basic members had the highest average spending.There was very weak relationship between age and spending,while gender and product category showed no strong relationship.After cleaning the data,287 complete records remained.
+
+
+#conclusion
+The transaction data helps us understand how customers shop,it shows what products sell most,how much customers spend,which payment methods they prefer and how spending differs by membership status.In our data,Home Appliances had the highest sales,UPI was the most used payment method and basic members had the highest average spending.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
